@@ -1,22 +1,23 @@
-CC		:=	gcc
-AS		:=	gcc
-OBJCOPY	:=	objcopy
-ODIR	:=	build
-SDIR	:=	source
-IDIRS	:= -Iinclude
-CFLAGS	:=	$(IDIRS) -Os -std=gnu11 -ffunction-sections -fdata-sections -fno-builtin -nostartfiles -nostdlib -Wall -masm=intel -march=btver2 -mtune=btver2 -m64 -mabi=sysv -mcmodel=small -fpie -DVERSION_$(VERSION)
-SFLAGS	:=	-nostartfiles -nostdlib -march=btver2 -mtune=btver2
-LFLAGS	:=	-Xlinker -T linkfile -Wl,--build-id=none -Wl,--gc-sections
-CFILES	:=	$(wildcard $(SDIR)/*.c)
-SFILES	:=	$(wildcard $(SDIR)/*.s)
-OBJS	:=	$(patsubst $(SDIR)/%.c, $(ODIR)/%.o, $(CFILES)) $(patsubst $(SDIR)/%.s, $(ODIR)/%.o, $(SFILES))
+CC        	:=    g++
+AS        	:=    g++
+OBJCOPY   	:=    objcopy
+ODIR    	:=    build
+SDIR    	:=    source
+IDIRS    	:=    -Iinclude -I$(FREEBSD_INCLUDES)
+CFLAGS    	:=    $(IDIRS) -O3 -s -w -std=gnu++11 -fno-builtin -fno-exceptions -fno-asynchronous-unwind-tables -nostartfiles -nostdlib -w -masm=intel -march=btver2 -mtune=btver2 -m64 -mabi=sysv -mcmodel=small -mstackrealign -fPIE -DVERSION_$(VERSION)
+LFLAGS    	:=    -Xlinker -T linkfile -Wl,--build-id=none -mstackrealign -pie
+SFLAGS  	:=    -nostartfiles -nostdlib -masm=intel -march=btver2 -mtune=btver2 -m64 -mabi=sysv -mcmodel=small
+CFILES    	:=    $(shell find $(SDIR) -name \*.cpp)
+SFILES    	:=    $(shell find $(SDIR) -name \*.s)
+OBJS    	:=    $(patsubst $(SDIR)/%,$(ODIR)/%,$(CFILES:.cpp=.o)) $(patsubst $(SDIR)/%,$(ODIR)/%,$(SFILES:.s=.o))
 
-TARGET = SPRX-Loader.bin
+TARGET = SPRX-Loader.ELF
 
 $(TARGET): $(ODIR) $(OBJS)
-	$(CC) crt0.s $(ODIR)/*.o -o $(TARGET) $(CFLAGS) $(LFLAGS)
+	$(CC) crt0.s $(OBJS) -o $(TARGET) $(CFLAGS) $(LFLAGS)
 
-$(ODIR)/%.o: $(SDIR)/%.c
+$(ODIR)/%.o: $(SDIR)/%.cpp
+	mkdir -p $(dir $@)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 $(ODIR)/%.o: $(SDIR)/%.s
@@ -26,9 +27,10 @@ $(ODIR):
 	@mkdir $@
 
 .PHONY: clean
+.PHONY: copy
 
 clean:
 	rm -f $(TARGET) $(ODIR)/*.o
 
 copy:
-	objcopy -O binary SPRX-Loader.bin ../SPRX-Loader-$(VERSION).bin
+	objcopy -O binary SPRX-Loader.ELF ../SPRX-Loader-$(VERSION).bin 
